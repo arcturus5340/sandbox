@@ -1,9 +1,10 @@
 ﻿uses OpenCL;
+uses NumLibABC;
 uses System;
 uses System.Runtime.InteropServices;
 
 const
-  MatrW = 5000;
+  MatrW = 1000;
   
   VecByteSize = MatrW*8;
   MatrL = MatrW*MatrW;
@@ -20,10 +21,10 @@ begin
   // Инициализация
   var platform: cl_platform_id;
   cl.GetPlatformIDs(1, platform, IntPtr.Zero).RaiseIfError;
-
   var device: cl_device_id;
   cl.GetDeviceIDs(platform, DeviceType.DEVICE_TYPE_DEFAULT, 1, device, IntPtr.Zero).RaiseIfError;
 //  cl.GetDeviceIDs(platform, DeviceType.DEVICE_TYPE_ALL, 1,device,IntPtr.Zero).RaiseIfError;
+
 
   var context := cl.CreateContext(nil, 1, device, nil, IntPtr.Zero, ec);
   ec.RaiseIfError;
@@ -83,5 +84,18 @@ begin
   cl.EnqueueReadBuffer(command_queue, C_buf,  Bool.BLOCKING, new UIntPtr(0), new UIntPtr(MatrByteSize), A[0,0], 1,k1_ev,IntPtr.Zero).RaiseIfError;
   var opencl_end := Milliseconds;
   println(format('Время работы OpenCl: {0} сек', (opencl_end-opencl_start)/1000));
+  println;
+  
+  var numlib_init_start := Milliseconds;
+  var numlib_A := new NumLibABC.Matrix(A);
+  var numlib_B := new NumLibABC.Matrix(B);
+  var numlib_init_end := Milliseconds;
+  println(format('Инициализация матриц NumLibABC: {0} сек', (numlib_init_end-numlib_init_start)/1000));
+  
+  var numlib_start := Milliseconds;
+  var C := numlib_A * numlib_B;
+  var numlib_end := Milliseconds;
+  println(format('Время работы матриц NumLibABC: {0} сек', (numlib_end-numlib_start)/1000));
+  println;
   
 end.
