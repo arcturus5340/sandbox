@@ -93,9 +93,40 @@ begin
   println(format('Инициализация матриц NumLibABC: {0} сек', (numlib_init_end-numlib_init_start)/1000));
   
   var numlib_start := Milliseconds;
-  var C := numlib_A * numlib_B;
+  var C_numlib := numlib_A * numlib_B;
   var numlib_end := Milliseconds;
   println(format('Время работы матриц NumLibABC: {0} сек', (numlib_end-numlib_start)/1000));
   println;
   
+  
+  var openmp_init_start := Milliseconds;
+  var C_openmp := new real[MatrW, MatrW];
+  var B_transposed := new real[MatrW, MatrW];
+  {$omp parallel for }
+  for var i:=0 to MatrW-1 do
+    for var j:=0 to MatrW-1 do
+      B_transposed[i, j] := B[i, j];
+    
+  var openmp_init_end := Milliseconds;
+  println(format('Инициализация OpenMP: {0} сек', (openmp_init_end-openmp_init_start)/1000));
+  var openmp_start := Milliseconds;
+      
+  {$omp parallel for }
+  for var i := 0 to MatrW-1 do
+    for var j := 0 to i-1 do
+      Swap(B_transposed[i,j], b_transposed[j,i]);
+  {$omp parallel for }
+  for var i:=0 to MatrW-1 do
+    for var j:=0 to MatrW-1 do
+    begin  
+       var cc := 0.0;
+       for var l:=0 to MatrW-1 do
+          cc += A[i,l]*B_transposed[j,l];
+       C_openmp[i,j] := cc;   
+    end;
+
+  var openmp_end := Milliseconds;
+  println(format('Время работы OpenMP: {0} сек', (openmp_end-openmp_start)/1000));
+  println;
+    
 end.
