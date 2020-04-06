@@ -9,11 +9,30 @@ const
   VecByteSize = MatrW*8;
   MatrL = MatrW*MatrW;
   MatrByteSize = MatrL*8;
+
+var
+  A: array [,] of real;
+  B: array [,] of real;
+  B_transposed: array [,] of real;
+  C: array [,] of real;
+  C_thread: array [,] of real;  
+  
+procedure ThMatrMul(obj: object); 
+begin
+  var data := integer(obj);
+  for var j := 0 to MatrW-1 do
+  begin  
+     var cc := 0.0;
+     for var l := 0 to MatrW-1 do
+        cc += A[data, l]*B_transposed[j, l];
+     C_thread[data, j] := cc;   
+  end;
+end;   
   
 begin
   Randomize(0);
-  var A := MatrRandomReal(MatrW,MatrW,0,1);
-  var B := MatrRandomReal(MatrW,MatrW,0,1);
+  A := MatrRandomReal(MatrW, MatrW, 0, 1);
+  B := MatrRandomReal(MatrW, MatrW, 0, 1);
   
   var opencl_init_start := Milliseconds;
   var ec: ErrorCode;
@@ -98,10 +117,9 @@ begin
   println(format('Время работы матриц NumLibABC: {0} сек', (numlib_end-numlib_start)/1000));
   println;
   
-  
   var openmp_init_start := Milliseconds;
   var C_openmp := new real[MatrW, MatrW];
-  var B_transposed := new real[MatrW, MatrW];
+  B_transposed := new real[MatrW, MatrW];
   {$omp parallel for }
   for var i:=0 to MatrW-1 do
     for var j:=0 to MatrW-1 do
@@ -128,5 +146,30 @@ begin
   var openmp_end := Milliseconds;
   println(format('Время работы OpenMP: {0} сек', (openmp_end-openmp_start)/1000));
   println;
-    
+
+  var thread_init_start := Milliseconds;
+  B_transposed := new real[MatrW, MatrW];
+  for var i:=0 to MatrW-1 do
+    for var j:=0 to MatrW-1 do
+      B_transposed[i, j] := B[i, j];
+  C_thread := new real[MatrW, MatrW];
+  
+  var thread_array := new System.Threading.Thread[MatrW];
+  for var index := 0 to MatrW-1 do
+    thread_array[index] := new System.Threading.Thread(() -> ThMatrMul(index));
+        
+  var thread_init_end := Milliseconds;
+  println(format('Инициализация System.Threading: {0} сек', (thread_init_end-thread_init_start)/1000));
+  var thread_start := Milliseconds;
+  
+  for var index := 0 to MatrW-1 do
+    thread_array[index].Start();
+  
+  for var index := 0 to MatrW-1 do
+    thread_array[index].Join();
+  
+  var thread_end := Milliseconds;
+  println(format('Время работы System.Threading: {0} сек', (thread_end-thread_start)/1000));
+  println;
+  
 end.
