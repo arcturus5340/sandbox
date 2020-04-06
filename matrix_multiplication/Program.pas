@@ -17,15 +17,14 @@ var
   C: array [,] of real;
   C_thread: array [,] of real;  
   
-procedure ThMatrMul(obj: object); 
+procedure ThMatrMul(index: integer); 
 begin
-  var data := integer(obj);
   for var j := 0 to MatrW-1 do
   begin  
      var cc := 0.0;
      for var l := 0 to MatrW-1 do
-        cc += A[data, l]*B_transposed[j, l];
-     C_thread[data, j] := cc;   
+        cc += A[index, l]*B_transposed[j, l];
+     C_thread[index, j] := cc;   
   end;
 end;   
   
@@ -153,20 +152,12 @@ begin
     for var j:=0 to MatrW-1 do
       B_transposed[i, j] := B[i, j];
   C_thread := new real[MatrW, MatrW];
-  
-  var thread_array := new System.Threading.Thread[MatrW];
-  for var index := 0 to MatrW-1 do
-    thread_array[index] := new System.Threading.Thread(() -> ThMatrMul(index));
         
   var thread_init_end := Milliseconds;
   println(format('Инициализация System.Threading: {0} сек', (thread_init_end-thread_init_start)/1000));
   var thread_start := Milliseconds;
   
-  for var index := 0 to MatrW-1 do
-    thread_array[index].Start();
-  
-  for var index := 0 to MatrW-1 do
-    thread_array[index].Join();
+  System.Threading.Tasks.Parallel.For(0, MatrW-1, thMatrMul);
   
   var thread_end := Milliseconds;
   println(format('Время работы System.Threading: {0} сек', (thread_end-thread_start)/1000));
